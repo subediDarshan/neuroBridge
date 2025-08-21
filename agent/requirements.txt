@@ -1,0 +1,6 @@
+python-socketio
+requests
+websocket-client
+pymongo[srv]
+dotenv
+pydantic
