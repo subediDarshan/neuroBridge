@@ -1,0 +1,220 @@
+from langgraph.graph import StateGraph, END
+from typing import TypedDict
+from langchain.chat_models import init_chat_model
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+from config.db import realtime_data_collection
+from pymongo import DESCENDING
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import PromptTemplate
+import time
+
+load_dotenv()
+
+model = init_chat_model(model="gemini-2.0-flash", model_provider="google_genai")
+
+
+
+
+# ---- STATE ----
+class State(TypedDict):
+    data: dict
+    status: str
+    decision: str
+    alert_sent: bool
+    user_reply: str | None
+    sms_message: str
+
+
+# ---- NODES ----
+def take_data(state: State):
+    return {"status": "data_collected"}
+
+def hardcoded_checks(state: State):
+    data = state["data"]
+    heart_rate, spo2, stress = data.get("heart_rate"), data.get("spo2"), data.get("stress_level")
+
+    status_list = []
+
+    # check heart rate
+    if 60 <= heart_rate <= 100:
+        status_list.append("Normal")
+    elif 50 <= heart_rate <= 59 or 101 <= heart_rate <= 110:
+        status_list.append("Low Alert")
+    else:
+        status_list.append("High Alert")
+
+    # check SpO2
+    if 95 <= spo2 <= 100:
+        status_list.append("Normal")
+    elif 93 <= spo2 <= 94:
+        status_list.append("Low Alert")
+    else:
+        status_list.append("High Alert")
+
+    # check stress level
+    if 0 <= stress <= 40:
+        status_list.append("Normal")
+    elif 41 <= stress <= 60:
+        status_list.append("Low Alert")
+    else:
+        status_list.append("High Alert")
+
+    # determine final status
+    if "High Alert" in status_list:
+        final_status = "high_alert"
+    elif "Low Alert" in status_list:
+        final_status = "small_alert"
+    else:
+        final_status = "normal"
+
+    
+    return {"decision": final_status}
+
+
+def pass_to_llm(state: State):
+    data = state["data"]
+
+    # Query the last 60 records from the database
+    recent_data = list(realtime_data_collection.find().sort("timestamp", DESCENDING).limit(60))
+
+    # Calculate averages
+    if recent_data:
+        avg_hr = sum(record["heart_rate"] for record in recent_data) / len(recent_data)
+        avg_spo2 = sum(record["spo2"] for record in recent_data) / len(recent_data)
+        avg_stress = sum(record["stress_level"] for record in recent_data) / len(recent_data)
+    else:
+        avg_hr = avg_spo2 = avg_stress = None  # Handle case where no data is available
+
+
+    data.update({
+        "avg_hr": avg_hr,
+        "avg_spo2": avg_spo2,
+        "avg_stress": avg_stress
+    })
+    
+
+    class SmsMessage(BaseModel):
+        message: str = Field(description='Short SMS alert message for the patient')
+
+
+    parser = PydanticOutputParser(pydantic_object=SmsMessage)
+
+    template = PromptTemplate(
+        template="""
+        You are an AI health assistant monitoring patient vitals.
+        You received new data that triggered a small alert.
+
+        Patient Data:
+        - Heart Rate: {heart_rate} bpm
+        - SpO2: {spo2} %
+        - Stress Level: {stress}
+        - Average HR (last 5 min): {avg_hr} bpm
+        - Average SpO2 (last 5 min): {avg_spo2} %
+        - Average Stress Level (last 5 min): {avg_stress}
+
+        Task:
+        Write a short SMS alert message for the patient.  
+        Guidelines:
+        - Be concise (max 2 sentences, under 200 characters).  
+        - Mention what was detected (e.g., "slightly high heart rate").  
+        - Suggest a simple, calm next step (e.g., "rest for a few minutes and hydrate").  
+        - Do NOT sound alarming unless it's clearly critical.  
+        - Avoid medical jargon.  
+        - Return ONLY the SMS text, nothing else.
+
+
+        {format_instruction}
+        """,
+        input_variables=["heart_rate", "spo2", "stress", "avg_hr", "avg_spo2", "avg_stress"],
+        partial_variables={'format_instruction':parser.get_format_instructions()}
+    )
+
+    chain = template | model | parser
+    final_result = chain.invoke(data)
+
+    return {"sms_message": final_result.message}
+
+
+def sms_alert(state: State):
+    print("📩 Sending SMS alert...")
+    sms_message = state.get("sms_message")
+    # Twilio Integration for SMS
+    return {"alert_sent": True}
+
+def sms_alert_and_wait_for_reply(state: State):
+    print("📩 Sending SMS alert...")
+    sms_message = state.get("sms_message")
+    # Twilio Integration for SMS
+    state["alert_sent"] = True
+
+    time.sleep(5)
+
+    reply = state.get("user_reply", None)
+    if reply == "normal":
+        return {"decision": "normal"}
+    else:
+        return {"decision": "escalate"}
+
+def emergency_call(state: State):
+    print("🚨 Emergency Call triggered!")
+    # Twilio integration for call
+    return {"decision": "escalated"}
+
+
+# ---- GRAPH ----
+graph = StateGraph(State)
+
+graph.add_node("take_data", take_data)
+graph.add_node("hardcoded_checks", hardcoded_checks)
+graph.add_node("pass_to_llm", pass_to_llm)
+graph.add_node("sms_alert", sms_alert)
+graph.add_node("sms_alert_and_wait_for_reply", sms_alert_and_wait_for_reply)
+graph.add_node("emergency_call", emergency_call)
+
+graph.set_entry_point("take_data")
+
+# ---- EDGES ----
+graph.add_edge("take_data", "hardcoded_checks")
+
+# Branching from hardcoded checks
+graph.add_conditional_edges(
+    "hardcoded_checks",
+    lambda s: s["decision"],
+    {
+        "normal": END,
+        "small_alert": "pass_to_llm",
+        "high_alert": "sms_alert_and_wait_for_reply"
+    },
+)
+
+graph.add_edge("pass_to_llm", "sms_alert")
+graph.add_edge("sms_alert", END)
+
+# From reply
+graph.add_conditional_edges(
+    "sms_alert_and_wait_for_reply",
+    lambda s: s["decision"],
+    {
+        "normal": END,
+        "escalate": "emergency_call",
+    },
+)
+
+graph.add_edge("emergency_call", END)
+
+# ---- COMPILE ----
+emergency_workflow = graph.compile()
+
+
+# ---- RUN DEMO ----
+initial_state = {
+    "data": {"heart_rate": 190, "spo2": 80},
+    "status": "",
+    "decision": "",
+    "alert_sent": False,
+    "user_reply": None,   # or "normal"
+}
+
+final_state = emergency_workflow.invoke(initial_state)
+print("✅ Final state:", final_state)
