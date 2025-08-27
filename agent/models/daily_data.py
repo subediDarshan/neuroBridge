@@ -21,18 +21,11 @@ class NutritionData(BaseModel):
     fat: int
 
 
-class GoalsData(BaseModel):
-    step_goal: int
-    calorie_goal: int
-    sleep_goal: int
-    water_goal: float
-
 
 class daily_data(BaseModel):
     sleep: SleepData
     nutrition: NutritionData
     water_intake: float
-    goals: GoalsData
     energy_score: int
     timestamp: datetime
 

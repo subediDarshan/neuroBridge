@@ -64,12 +64,6 @@ function generateDailyData() {
             fat: random(40, 90),
         },
         water_intake: (Math.random() * 3).toFixed(1), // liters
-        goals: {
-            step_goal: 10000,
-            calorie_goal: 2500,
-            sleep_goal: 480,
-            water_goal: 2.5,
-        },
         energy_score: random(50, 95),
         timestamp: Date.now(),
     };
