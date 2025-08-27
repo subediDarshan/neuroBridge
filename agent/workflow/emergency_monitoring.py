@@ -7,7 +7,7 @@ from config.db import realtime_data_collection
 from pymongo import DESCENDING
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
-import time
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -22,7 +22,6 @@ class State(TypedDict):
     status: str
     decision: str
     alert_sent: bool
-    user_reply: str | None
     sms_message: str
 
 
@@ -75,22 +74,29 @@ def hardcoded_checks(state: State):
 def pass_to_llm(state: State):
     data = state["data"]
 
-    # Query the last 60 records from the database
-    recent_data = list(realtime_data_collection.find().sort("timestamp", DESCENDING).limit(60))
+    # Calculate 5 minutes ago
+    five_minutes_ago = datetime.now(datetime.timezone.utc) - timedelta(minutes=5)
+
+    # Query records from last 5 minutes
+    recent_data = list(
+        realtime_data_collection.find(
+            {"timestamp": {"$gte": five_minutes_ago}}
+        ).sort("timestamp", DESCENDING)
+    )
 
     # Calculate averages
     if recent_data:
         avg_hr = sum(record["heart_rate"] for record in recent_data) / len(recent_data)
         avg_spo2 = sum(record["spo2"] for record in recent_data) / len(recent_data)
-        avg_stress = sum(record["stress_level"] for record in recent_data) / len(recent_data)
+        avg_stress_level = sum(record["stress_level"] for record in recent_data) / len(recent_data)
     else:
-        avg_hr = avg_spo2 = avg_stress = None  # Handle case where no data is available
+        avg_hr = avg_spo2 = avg_stress_level = None  # Handle case where no data is available
 
 
     data.update({
         "avg_hr": avg_hr,
         "avg_spo2": avg_spo2,
-        "avg_stress": avg_stress
+        "avg_stress_level": avg_stress_level
     })
     
 
@@ -108,10 +114,11 @@ def pass_to_llm(state: State):
         Patient Data:
         - Heart Rate: {heart_rate} bpm
         - SpO2: {spo2} %
-        - Stress Level: {stress}
+        - Stress Level: {stress_level}
         - Average HR (last 5 min): {avg_hr} bpm
         - Average SpO2 (last 5 min): {avg_spo2} %
-        - Average Stress Level (last 5 min): {avg_stress}
+        - Average Stress Level (last 5 min): {avg_stress_level}
+        - Timestamp: {timestamp}
 
         Task:
         Write a short SMS alert message for the patient.  
@@ -126,7 +133,7 @@ def pass_to_llm(state: State):
 
         {format_instruction}
         """,
-        input_variables=["heart_rate", "spo2", "stress", "avg_hr", "avg_spo2", "avg_stress"],
+        input_variables=["heart_rate", "spo2", "stress_level", "avg_hr", "avg_spo2", "avg_stress_level", "timestamp"],
         partial_variables={'format_instruction':parser.get_format_instructions()}
     )
 
@@ -139,27 +146,15 @@ def pass_to_llm(state: State):
 def sms_alert(state: State):
     print("📩 Sending SMS alert...")
     sms_message = state.get("sms_message")
+    print(f"SMS: {sms_message}")
     # Twilio Integration for SMS
     return {"alert_sent": True}
 
-def sms_alert_and_wait_for_reply(state: State):
-    print("📩 Sending SMS alert...")
-    sms_message = state.get("sms_message")
-    # Twilio Integration for SMS
-    state["alert_sent"] = True
-
-    time.sleep(5)
-
-    reply = state.get("user_reply", None)
-    if reply == "normal":
-        return {"decision": "normal"}
-    else:
-        return {"decision": "escalate"}
 
 def emergency_call(state: State):
     print("🚨 Emergency Call triggered!")
     # Twilio integration for call
-    return {"decision": "escalated"}
+    return {"decision": "called"}
 
 
 # ---- GRAPH ----
@@ -169,7 +164,6 @@ graph.add_node("take_data", take_data)
 graph.add_node("hardcoded_checks", hardcoded_checks)
 graph.add_node("pass_to_llm", pass_to_llm)
 graph.add_node("sms_alert", sms_alert)
-graph.add_node("sms_alert_and_wait_for_reply", sms_alert_and_wait_for_reply)
 graph.add_node("emergency_call", emergency_call)
 
 graph.set_entry_point("take_data")
@@ -184,22 +178,13 @@ graph.add_conditional_edges(
     {
         "normal": END,
         "small_alert": "pass_to_llm",
-        "high_alert": "sms_alert_and_wait_for_reply"
+        "high_alert": "emergency_call"
     },
 )
 
 graph.add_edge("pass_to_llm", "sms_alert")
 graph.add_edge("sms_alert", END)
 
-# From reply
-graph.add_conditional_edges(
-    "sms_alert_and_wait_for_reply",
-    lambda s: s["decision"],
-    {
-        "normal": END,
-        "escalate": "emergency_call",
-    },
-)
 
 graph.add_edge("emergency_call", END)
 
@@ -207,14 +192,4 @@ graph.add_edge("emergency_call", END)
 emergency_workflow = graph.compile()
 
 
-# ---- RUN DEMO ----
-initial_state = {
-    "data": {"heart_rate": 190, "spo2": 80},
-    "status": "",
-    "decision": "",
-    "alert_sent": False,
-    "user_reply": None,   # or "normal"
-}
 
-final_state = emergency_workflow.invoke(initial_state)
-print("✅ Final state:", final_state)

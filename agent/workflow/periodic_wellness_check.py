@@ -7,6 +7,7 @@ from config.db import realtime_data_collection
 from pymongo import DESCENDING
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -24,7 +25,16 @@ class State(TypedDict):
 
 # ---- NODES ----
 def aggregate_data(state: State):
-    past_3h_data = list(realtime_data_collection.find().sort("timestamp", DESCENDING).limit(2160))
+
+    # Calculate 5 minutes ago
+    three_hours_ago = datetime.now(datetime.timezone.utc) - timedelta(hours=3)
+
+    # Query records from last 5 minutes
+    past_3h_data = list(
+        realtime_data_collection.find(
+            {"timestamp": {"$gte": three_hours_ago}}
+        ).sort("timestamp", DESCENDING)
+    )
 
     if past_3h_data:
         avg_hr = sum(record["heart_rate"] for record in past_3h_data) / len(past_3h_data)

@@ -1,6 +1,0 @@
-.env
-.venv
-__pycache__/
-agent/twilio/node_modules/
-**/node_modules/
-node_modules/

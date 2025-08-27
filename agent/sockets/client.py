@@ -3,6 +3,7 @@ import threading
 from config.db import realtime_data_collection, daily_data_collection
 from models.realtime_data import realtime_data
 from models.daily_data import daily_data
+from workflow.emergency_monitoring import emergency_workflow
 
 sio = socketio.Client()
 
@@ -30,6 +31,18 @@ def register_handlers():
             save_to_db(realtime_data_collection, validated)
         except Exception as e:
             print(f"❌ Validation failed for realtime data: {e}")
+        
+
+        excluded_keys = {"steps", "calories_burned"} 
+        filtered_data = {k: v for k, v in data.items() if k not in excluded_keys}
+
+        initial_state = {
+            "data": filtered_data,
+            "alert_sent": False,
+        }
+        def task():
+            emergency_workflow.invoke(initial_state)
+        threading.Thread(target=task, daemon=True).start()
 
 
     @sio.on("dailyData")

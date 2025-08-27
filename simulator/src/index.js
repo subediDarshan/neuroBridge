@@ -127,12 +127,3 @@ server.listen(3000, () => {
 
 
 
-
-// Simulate Heart-attack
-// curl -X POST "http://localhost:3000/override" \
-//   -H "Content-Type: application/json" \
-//   -d '{"heart_rate": 195, "spo2": 88, "stress_level": 10}'
-
-
-// Reset
-// curl -X POST "http://localhost:3000/reset"
