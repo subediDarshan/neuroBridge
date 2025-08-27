@@ -7,7 +7,7 @@ from config.db import realtime_data_collection
 from pymongo import DESCENDING
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 load_dotenv()
 
@@ -27,7 +27,7 @@ class State(TypedDict):
 def aggregate_data(state: State):
 
     # Calculate 5 minutes ago
-    three_hours_ago = datetime.now(datetime.timezone.utc) - timedelta(hours=3)
+    three_hours_ago = datetime.now(timezone.utc) - timedelta(hours=3)
 
     # Query records from last 5 minutes
     past_3h_data = list(
@@ -106,6 +106,7 @@ def pass_to_llm(state: State):
 
 def sms_alert(state: State):
     print("📩 Sending SMS alert...")
+    
     sms_message = state.get("sms_message")
     # Twilio Integration for SMS
     return {**state, "alert_sent": True}

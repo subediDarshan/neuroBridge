@@ -3,11 +3,13 @@ from typing import TypedDict
 from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
-from config.db import realtime_data_collection
+from config.db import realtime_data_collection, call_sms_history_collection
 from pymongo import DESCENDING
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from utils.spam_avoidance import cooled_off
+from models.call_sms_history import call_sms_history
 
 load_dotenv()
 
@@ -67,6 +69,13 @@ def hardcoded_checks(state: State):
     else:
         final_status = "normal"
 
+    if(
+        (final_status == "high_alert" and not(cooled_off("emergency_call")))
+        or
+        (final_status == "small_alert" and not(cooled_off("emergency_sms")))
+    ):
+        final_status = "normal"
+    
     
     return {"decision": final_status}
 
@@ -75,7 +84,7 @@ def pass_to_llm(state: State):
     data = state["data"]
 
     # Calculate 5 minutes ago
-    five_minutes_ago = datetime.now(datetime.timezone.utc) - timedelta(minutes=5)
+    five_minutes_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
 
     # Query records from last 5 minutes
     recent_data = list(
@@ -145,6 +154,11 @@ def pass_to_llm(state: State):
 
 def sms_alert(state: State):
     print("📩 Sending SMS alert...")
+
+    validated_data = call_sms_history(type = "emergency_sms", timestamp = datetime.now(timezone.utc))
+    call_sms_history_collection.insert_one(validated_data.model_dump())
+
+
     sms_message = state.get("sms_message")
     print(f"SMS: {sms_message}")
     # Twilio Integration for SMS
@@ -153,6 +167,10 @@ def sms_alert(state: State):
 
 def emergency_call(state: State):
     print("🚨 Emergency Call triggered!")
+
+    validated_data = call_sms_history(type = "emergency_call", timestamp = datetime.now(timezone.utc))
+    call_sms_history_collection.insert_one(validated_data.model_dump())
+
     # Twilio integration for call
     return {"decision": "called"}
 
