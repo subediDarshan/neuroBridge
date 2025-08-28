@@ -70,7 +70,7 @@ def hardcoded_checks(state: State):
         final_status = "normal"
 
     if(
-        (final_status == "high_alert" and not(cooled_off("emergency_call")))
+        (final_status == "high_alert" and not(cooled_off("call")))
         or
         (final_status == "small_alert" and not(cooled_off("emergency_sms")))
     ):
@@ -168,7 +168,7 @@ def sms_alert(state: State):
 def emergency_call(state: State):
     print("🚨 Emergency Call triggered!")
 
-    validated_data = call_sms_history(type = "emergency_call", timestamp = datetime.now(timezone.utc))
+    validated_data = call_sms_history(type = "call", timestamp = datetime.now(timezone.utc))
     call_sms_history_collection.insert_one(validated_data.model_dump())
 
     # Twilio integration for call
