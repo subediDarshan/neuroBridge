@@ -45,9 +45,6 @@ def register_handlers():
             emergency_workflow.invoke(initial_state)
         threading.Thread(target=task, daemon=True).start()
 
-        def task2():
-            periodic_workflow.invoke({})
-        threading.Thread(target=task2, daemon=True).start()
 
 
     @sio.on("dailyData")
