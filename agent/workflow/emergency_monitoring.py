@@ -25,6 +25,7 @@ class State(TypedDict):
     decision: str
     alert_sent: bool
     sms_message: str
+    therapist_conclusion: str
 
 
 # ---- NODES ----
@@ -58,8 +59,7 @@ def hardcoded_checks(state: State):
         status_list.append("Normal")
     elif 41 <= stress <= 60:
         status_list.append("Low Alert")
-    else:
-        status_list.append("High Alert")
+
 
     # determine final status
     if "High Alert" in status_list:
@@ -70,12 +70,14 @@ def hardcoded_checks(state: State):
         final_status = "normal"
 
     if(
-        (final_status == "high_alert" and not(cooled_off("call")))
+        (final_status == "high_alert" and not(cooled_off("emergency_call")))
         or
         (final_status == "small_alert" and not(cooled_off("emergency_sms")))
     ):
         final_status = "normal"
     
+    if(final_status == "normal" and stress > 60 and cooled_off("therapist_call")):
+        final_status = "high_stress"
     
     return {"decision": final_status}
 
@@ -168,11 +170,37 @@ def sms_alert(state: State):
 def emergency_call(state: State):
     print("🚨 Emergency Call triggered!")
 
-    validated_data = call_sms_history(type = "call", timestamp = datetime.now(timezone.utc))
+    validated_data = call_sms_history(type = "emergency_call", timestamp = datetime.now(timezone.utc))
     call_sms_history_collection.insert_one(validated_data.model_dump())
 
+    emergency_context = state["data"]
+
     # Twilio integration for call
-    return {"decision": "called"}
+    return {"decision": "called emergency contact"}
+
+
+def family_call(state: State):
+    print("🚨 Family Call triggered!")
+
+    validated_data = call_sms_history(type = "family_call", timestamp = datetime.now(timezone.utc))
+    call_sms_history_collection.insert_one(validated_data.model_dump())
+
+    family_context = state["therapist_conclusion"]
+
+    # Twilio integration for call
+    return {"decision": "called family contact"}
+
+
+def therapist_call(state: State):
+    print("🚨 Therapist Call triggered!")
+
+    validated_data = call_sms_history(type = "therapist_call", timestamp = datetime.now(timezone.utc))
+    call_sms_history_collection.insert_one(validated_data.model_dump())
+
+    therapist_context = state["data"]
+
+    # Twilio integration for call
+    return {"decision": "escalate", "therapist_conclusion": "he is sad because his dog died"}
 
 
 # ---- GRAPH ----
@@ -183,6 +211,8 @@ graph.add_node("hardcoded_checks", hardcoded_checks)
 graph.add_node("pass_to_llm", pass_to_llm)
 graph.add_node("sms_alert", sms_alert)
 graph.add_node("emergency_call", emergency_call)
+graph.add_node("therapist_call", therapist_call)
+graph.add_node("family_call", family_call)
 
 graph.set_entry_point("take_data")
 
@@ -196,7 +226,8 @@ graph.add_conditional_edges(
     {
         "normal": END,
         "small_alert": "pass_to_llm",
-        "high_alert": "emergency_call"
+        "high_alert": "emergency_call",
+        "high_stress": "therapist_call"
     },
 )
 
@@ -205,6 +236,15 @@ graph.add_edge("sms_alert", END)
 
 
 graph.add_edge("emergency_call", END)
+graph.add_conditional_edges(
+    "therapist_call",
+    lambda s: s["decision"],
+    {
+        "normal": END,
+        "escalate": "family_call",
+    },
+)
+graph.add_edge("family_call", END)
 
 # ---- COMPILE ----
 emergency_workflow = graph.compile()

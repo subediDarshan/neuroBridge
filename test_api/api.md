@@ -21,3 +21,11 @@ curl -X POST "http://localhost:3000/override" \
      -H "Content-Type: application/json" \
      -d '{"heart_rate": 105, "spo2": 96, "stress_level": 5}'
 ```
+
+## Highly stressed
+
+```bash
+curl -X POST "http://localhost:3000/override" \
+     -H "Content-Type: application/json" \
+     -d '{"heart_rate": 80, "spo2": 97, "stress_level": 92}'
+```
