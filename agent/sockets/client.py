@@ -4,6 +4,7 @@ from config.db import realtime_data_collection, daily_data_collection
 from models.realtime_data import realtime_data
 from models.daily_data import daily_data
 from workflow.emergency_monitoring import emergency_workflow
+from workflow.periodic_wellness_check import periodic_workflow
 
 sio = socketio.Client()
 
@@ -44,6 +45,10 @@ def register_handlers():
             emergency_workflow.invoke(initial_state)
         threading.Thread(target=task, daemon=True).start()
 
+        def task2():
+            periodic_workflow.invoke({})
+        threading.Thread(target=task2, daemon=True).start()
+
 
     @sio.on("dailyData")
     def on_daily_data_handler(data):
@@ -73,4 +78,8 @@ def register_handlers():
 def connect_to_server(url="http://localhost:3000"):
     register_handlers()
     sio.connect(url)
-    sio.wait()
+    try:
+        sio.wait()
+    except KeyboardInterrupt:
+        print("Shutting down gracefully...")
+        sio.disconnect()

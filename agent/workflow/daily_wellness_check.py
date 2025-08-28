@@ -24,7 +24,10 @@ class State(TypedDict):
 
 # ---- NODES ----
 def aggregate_data(state: State):
-    latest_daily_data = daily_data_collection.find_one(sort=[("timestamp", -1)]) or {}
+    latest_daily_data = daily_data_collection.find_one(sort=[("timestamp", -1)], projection={"_id": 0}) or {}
+    if latest_daily_data == {}:
+        return END
+    
     return {"status": "data_collected", "data": latest_daily_data}
 
 
@@ -60,7 +63,7 @@ def pass_to_llm(state: State):
     )
 
     chain = template | model | parser
-    final_result = chain.invoke({"patient_data": json.dumps(data, indent=2)})
+    final_result = chain.invoke({"patient_data": json.dumps(data, indent=2, default=str)})
 
     return {**state, "sms_message": final_result.message}
 
@@ -68,6 +71,7 @@ def pass_to_llm(state: State):
 def sms_alert(state: State):
     print("📩 Sending SMS alert...")
     sms_message = state.get("sms_message")
+    print(f"sms_message: {sms_message}")
     # Twilio Integration for SMS
     return {**state, "alert_sent": True}
 
@@ -89,9 +93,6 @@ graph.add_edge("sms_alert", END)
 
 
 # ---- COMPILE ----
-periodic_workflow = graph.compile()
+daily_workflow = graph.compile()
 
 
-# ---- RUN DEMO ----
-final_state = periodic_workflow.invoke()
-print("✅ Final state:", final_state)

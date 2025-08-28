@@ -42,7 +42,10 @@ def take_data_3month(state: State):
     daily_data = list(daily_data_collection.find(
         {"timestamp": {"$gte": three_months_ago}}
     ).sort("timestamp", DESCENDING))
-    
+
+    if(len(realtime_data) == 0 or len(daily_data) == 0):
+        return END
+
     # Analyze realtime trends
     realtime_trends = {}
     if realtime_data:

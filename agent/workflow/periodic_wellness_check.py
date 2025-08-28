@@ -36,6 +36,9 @@ def aggregate_data(state: State):
         ).sort("timestamp", DESCENDING)
     )
 
+    if(len(past_3h_data) == 0):
+        return END
+
     if past_3h_data:
         avg_hr = sum(record["heart_rate"] for record in past_3h_data) / len(past_3h_data)
         avg_spo2 = sum(record["spo2"] for record in past_3h_data) / len(past_3h_data)
@@ -108,6 +111,8 @@ def sms_alert(state: State):
     print("📩 Sending SMS alert...")
     
     sms_message = state.get("sms_message")
+
+    print(f"sms_message: {sms_message}")
     # Twilio Integration for SMS
     return {**state, "alert_sent": True}
 
@@ -132,6 +137,3 @@ graph.add_edge("sms_alert", END)
 periodic_workflow = graph.compile()
 
 
-# ---- RUN DEMO ----
-final_state = periodic_workflow.invoke()
-print("✅ Final state:", final_state)
