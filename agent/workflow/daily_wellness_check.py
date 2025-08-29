@@ -95,4 +95,7 @@ graph.add_edge("sms_alert", END)
 # ---- COMPILE ----
 daily_workflow = graph.compile()
 
+if __name__ == "__main__":
+    daily_workflow.invoke({})
+
 
