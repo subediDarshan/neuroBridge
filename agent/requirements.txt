@@ -8,3 +8,5 @@ pydantic
 langgraph
 langchain
 langchain-google-genai
+
+schedule

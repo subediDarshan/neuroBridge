@@ -4,7 +4,7 @@ from config.db import realtime_data_collection, daily_data_collection
 from models.realtime_data import realtime_data
 from models.daily_data import daily_data
 from workflow.emergency_monitoring import emergency_workflow
-from workflow.periodic_wellness_check import periodic_workflow
+from workflow.daily_wellness_check import daily_workflow
 
 sio = socketio.Client()
 
@@ -55,6 +55,10 @@ def register_handlers():
             save_to_db(daily_data_collection, validated)
         except Exception as e:
             print(f"❌ Validation failed for daily data: {e}")
+        
+        def task():
+            daily_workflow.invoke({})
+        threading.Thread(target=task, daemon=True).start()
 
 
     @sio.on("overrideSet")
@@ -75,8 +79,5 @@ def register_handlers():
 def connect_to_server(url="http://localhost:3000"):
     register_handlers()
     sio.connect(url)
-    try:
-        sio.wait()
-    except KeyboardInterrupt:
-        print("Shutting down gracefully...")
-        sio.disconnect()
+    sio.wait()
+
