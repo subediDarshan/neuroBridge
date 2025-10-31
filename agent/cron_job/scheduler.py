@@ -3,6 +3,7 @@ import threading
 import time
 from workflow.diagnose import trend_analysis_workflow
 from workflow.periodic_wellness_check import periodic_workflow
+from utils.constants import diagnosis_workflow_interval, periodic_wellness_workflow_interval
 
 class WorkflowScheduler:
     def __init__(self):
@@ -30,11 +31,11 @@ class WorkflowScheduler:
     def setup_schedules(self):
         """Setup the scheduled jobs"""
         # Schedule diagnose workflow every 3 minutes
-        schedule.every(3).minutes.do(self.run_diagnose_workflow)
+        schedule.every(diagnosis_workflow_interval).minutes.do(self.run_diagnose_workflow)
         print("📅 Diagnose workflow scheduled (every 3 minutes)")
         
         # Schedule periodic wellness workflow every 2 minutes  
-        schedule.every(2).minutes.do(self.run_periodic_wellness_workflow)
+        schedule.every(periodic_wellness_workflow_interval).minutes.do(self.run_periodic_wellness_workflow)
         print("📅 Periodic wellness workflow scheduled (every 2 minutes)")
 
     def run_scheduler(self):

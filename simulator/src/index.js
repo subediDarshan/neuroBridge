@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
+import { realtimeDataInterval, dailyDataInterval } from "./constants";
 
 const app = express();
 
@@ -76,12 +77,12 @@ io.on("connection", (socket) => {
     // Realtime stream (every 5s)
     const realtimeInterval = setInterval(() => {
         socket.emit("realtimeData", generateRealtimeData());
-    }, 5000);
+    }, realtimeDataInterval);
 
     // Daily stream (every 60s in demo mode)
     const dailyInterval = setInterval(() => {
         socket.emit("dailyData", generateDailyData());
-    }, 60000);
+    }, dailyDataInterval);
 
     socket.on("disconnect", () => {
         console.log("❌ Client disconnected:", socket.id);
