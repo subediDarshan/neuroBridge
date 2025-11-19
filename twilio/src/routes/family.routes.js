@@ -1,22 +1,22 @@
+
 import express from "express";
 const router = express.Router();
 import client from "../config.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 import { getFamilySystemPrompt} from "../utils/prompts.js"
+import { callResults } from "./trigger.routes.js";
 
 const familyConversations = {};
 const callContext = {};
 
-export async function initiatesFamilyCall(patientEmotionalState, familyNumber) {
+export async function initiatesFamilyCall(patientEmotionalState, familyNumber, therapistCallSid = null, therapistSummary = null) {
     if (!familyNumber) {
         console.log("[Family Call] No family number provided, skipping family notification");
         return;
     }
 
     try {
-        patientEmotionalState = "SEVERELY_DEPRESSED";
-
         console.log(`[Family Call] Initiating call to family member: ${familyNumber}`);
         const call = await client.calls.create({
             url: `${process.env.PUBLIC_URL}/family-voice`,
@@ -29,7 +29,9 @@ export async function initiatesFamilyCall(patientEmotionalState, familyNumber) {
         if (!familyConversations[call.sid]) {
             familyConversations[call.sid] = {
                 patientEmotionalState,
-                conversation: []
+                conversation: [],
+                therapistSummary: therapistSummary,  // Store the summary
+                originalCallSid: therapistCallSid     // Store reference to original call
             };
         }
 
@@ -62,7 +64,7 @@ router.post("/family-voice", (req, res) => {
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
         <Say voice="Polly.Joanna">
-            Hello, this is Dr. Sarah, a licensed therapist. ${urgencyMessage} I just completed a wellness check with your family member and need to discuss my findings with you.
+            Hello, this is Dr. Anaya, a licensed therapist. ${urgencyMessage} I just completed a wellness check with your family member and need to discuss my findings with you.
         </Say>
         <Gather input="speech" timeout="15" speechTimeout="auto" language="en-US" action="/process-family-speech" method="POST">
             <Say voice="Polly.Joanna">Could you please tell me your relationship to the patient?</Say>
@@ -156,33 +158,46 @@ router.post("/family-voice-timeout", (req, res) => {
     res.type("text/xml").send(twiml);
 });
 
-router.get("/family-call", async (req, res) => {
-    const { familyNumber, patientName } = req.query;
 
-    if (!familyNumber) {
+router.post("/family-call", async (req, res) => {
+    const { therapistCallSid, familyNumber } = req.body;
+
+    if (!therapistCallSid || !familyNumber) {
         return res.status(400).json({
-            error: "Missing familyNumber parameter"
+            error: "Missing required parameters: therapistCallSid or familyNumber"
         });
     }
 
-    const testPatientName = patientName || "Patient";
-
-    callContext.patientName = testPatientName;
-    callContext.vitalsContext = { concernText: "elevated heart rate and low oxygen saturation" };
-    callContext.familyNumber = familyNumber;
-    callContext.status = "family_test";
+    // Wait for the emotion and summary to be ready
+    const callResult = callResults[therapistCallSid];
+    
+    if (!callResult || !callResult.completed) {
+        return res.status(400).json({
+            error: "Therapist call not completed yet or not found"
+        });
+    }
 
     try {
-        await initiatesFamilyCall("SEVERELY_DEPRESSED", familyNumber);
+        const { initiatesFamilyCall } = await import('./family.routes.js');
+        
+        const familyCallSid = await initiatesFamilyCall(
+            callResult.emotion,
+            familyNumber,
+            therapistCallSid,
+            callResult.summary
+        );
 
         res.json({
             success: true,
-            familyNumber: familyNumber
+            familyCallSid: familyCallSid,
+            therapistCallSid: therapistCallSid,
+            emotion: callResult.emotion,
+            summaryShared: true
         });
     } catch (error) {
-        console.error("Family Call Error:", error);
+        console.error("Error triggering family call:", error);
         res.status(500).json({
-            error: "Failed to initiate family test call",
+            error: "Failed to initiate family call",
             details: error.message
         });
     }
@@ -202,17 +217,20 @@ export function endCall(callSid) {
     console.log(`[${callSid}] Call ended`);
 }
 
-
 export async function getFamilyLLMResponse(convo, callSid, patientEmotionalState) {
     console.log(`[${callSid}] Sending family notification prompt to LLM`);
 
     try {
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        
+        const therapistSummary = familyConversations[callSid]?.therapistSummary || "No prior session summary available";
+        
         const result = await model.generateContent([
             getFamilySystemPrompt(
                 callContext?.patientName || "the patient",
                 patientEmotionalState,
-                callContext?.vitalsContext?.concernText
+                callContext?.vitalsContext?.concernText,
+                therapistSummary 
             ),
             ...convo.map(msg => msg.content).join('\n')
         ]);
