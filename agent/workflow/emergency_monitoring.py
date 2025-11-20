@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from utils.spam_avoidance import cooled_off
 from models.call_sms_history import call_sms_history
 import requests
+import time
 
 load_dotenv()
 
@@ -27,6 +28,7 @@ class State(TypedDict):
     alert_sent: bool
     sms_message: str
     therapist_conclusion: str
+    sid: str
 
 
 # ---- NODES ----
@@ -182,7 +184,47 @@ def emergency_call(state: State):
 
     emergency_context = state["data"]
 
+    class SummarizedText(BaseModel):
+        summary: str = Field(description='Short summary message of the patients vitals')
+
+
+    parser = PydanticOutputParser(pydantic_object=SummarizedText)
+
+    template = PromptTemplate(
+        template="""
+        You are an AI health assistant monitoring patient vitals.
+        You received new data that triggered a emergency alert.
+        
+        Patient Data:
+        - Heart Rate: {heart_rate} bpm
+        - SpO2: {spo2} %
+        - Stress Level: {stress_level}
+        - Timestamp: {timestamp}
+
+        Task:
+        You need to just summarize this data in very short words explaining what happened to patient.  
+        Guidelines:
+        - Be concise (under 500 characters).  
+        - Mention what was detected (e.g., "high heart rate").   
+        - Return ONLY the summarized text, nothing else.
+
+        {format_instruction}
+        """,
+        input_variables=["heart_rate", "spo2", "stress_level", "timestamp"],
+        partial_variables={'format_instruction':parser.get_format_instructions()}
+    )
+
+    chain = template | model | parser
+    final_result = chain.invoke(emergency_context)
+
+    final_context = final_result.summary
+
+    print("This is the emergency context: ", final_context)
+
     # Twilio integration for call
+    requests.get("https://twillio-testing-2.onrender.com/ambulance-call", params={"ambulanceNumber": "+917014664028", "patientName": "Priyansh", "patientAddress": "Patiala", "emergencyDetails": final_context})
+
+
     return {"decision": "called emergency contact"}
 
 
@@ -192,7 +234,9 @@ def family_call(state: State):
     validated_data = call_sms_history(type = "family_call", timestamp = datetime.now(timezone.utc))
     call_sms_history_collection.insert_one(validated_data.model_dump())
 
-    family_context = state["therapist_conclusion"]
+    sid = state["sid"]
+
+    res = requests.post("https://twillio-testing-2.onrender.com/family-call", json={"therapistCallSid": sid, "familyNumber": "+917014664028"})
 
     # Twilio integration for call
     return {"decision": "called family contact"}
@@ -204,10 +248,40 @@ def therapist_call(state: State):
     validated_data = call_sms_history(type = "therapist_call", timestamp = datetime.now(timezone.utc))
     call_sms_history_collection.insert_one(validated_data.model_dump())
 
-    therapist_context = state["data"]
 
     # Twilio integration for call
-    return {"decision": "escalate", "therapist_conclusion": "he is sad because his dog died"}
+    res = requests.get("https://twillio-testing-2.onrender.com/trigger-call")
+
+    data = res.json()        
+    sid = data.get("sid")
+
+    while True:
+        try:
+            res = requests.get(f"https://twillio-testing-2.onrender.com/get-emotion/{sid}")
+            data = res.json()
+
+            if "error" in data:
+                print("Call ongoing")
+                time.sleep(5)
+                continue
+            
+            print("Call Completed!")
+            break
+
+        except Exception as e:
+            print("Request failed:", e)
+            time.sleep(5)
+
+    res = requests.post(f"https://twillio-testing-2.onrender.com/generate-final-emotion/{sid}")
+    data = res.json()
+    emotion = data.get("emotion")
+    print("Emotion:", emotion)
+
+    if ("DEPRESSED" in emotion) or ("depressed" in emotion) :
+        res = requests.post(f"https://twillio-testing-2.onrender.com/generate-summary/{sid}")
+        return {"decision": "escalate", "sid": sid}
+
+    return {"decision": "normal"}
 
 
 # ---- GRAPH ----
