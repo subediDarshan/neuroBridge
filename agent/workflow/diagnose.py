@@ -9,6 +9,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from datetime import datetime, timedelta
 import json
+import requests
 
 load_dotenv()
 
@@ -240,12 +241,14 @@ def send_sms(state: State):
     print("📩 Sending trend analysis SMS alert...")
     print(f"Prediction: {state['prediction']}")
     print(f"SMS: {state['sms_message']}")
-    
-    # TODO: Integrate with Twilio
-    # sms_client.send_message(
-    #     to=patient_phone,
-    #     body=state['sms_message']
-    # )
+
+    if state['should_alert']:
+        payload = {
+            "phoneNumber": "+917014664028",
+            "message": state['sms_message']
+        }
+        response = requests.post("https://twillio-testing-2.onrender.com/send-sms", json=payload)
+        print("Status Code: ", response.status_code)
     
     return {**state, "status": "alert_sent"}
 

@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
-import { realtimeDataInterval, dailyDataInterval } from "./constants";
+import { realtimeDataInterval, dailyDataInterval } from "./constants.js";
 
 const app = express();
 

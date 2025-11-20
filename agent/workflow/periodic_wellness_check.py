@@ -8,6 +8,7 @@ from pymongo import DESCENDING
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from datetime import datetime, timedelta, timezone
+import requests
 
 load_dotenv()
 
@@ -114,6 +115,12 @@ def sms_alert(state: State):
 
     print(f"sms_message: {sms_message}")
     # Twilio Integration for SMS
+    payload = {
+        "phoneNumber": "+917014664028",
+        "message": sms_message
+    }
+    response = requests.post("https://twillio-testing-2.onrender.com/send-sms", json=payload)
+    print("Status Code: ", response.status_code)
     return {**state, "alert_sent": True}
 
 

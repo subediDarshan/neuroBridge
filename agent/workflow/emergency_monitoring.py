@@ -10,6 +10,7 @@ from langchain_core.prompts import PromptTemplate
 from datetime import datetime, timedelta, timezone
 from utils.spam_avoidance import cooled_off
 from models.call_sms_history import call_sms_history
+import requests
 
 load_dotenv()
 
@@ -164,6 +165,12 @@ def sms_alert(state: State):
     sms_message = state.get("sms_message")
     print(f"SMS: {sms_message}")
     # Twilio Integration for SMS
+    payload = {
+        "phoneNumber": "+917014664028",
+        "message": sms_message
+    }
+    response = requests.post("https://twillio-testing-2.onrender.com/send-sms", json=payload)
+    print("Status Code: ", response.status_code)
     return {"alert_sent": True}
 
 
