@@ -1,0 +1,201 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* NeuroBridge Design System - Medical/Health App Theme
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base colors - Clean medical whites and soft grays */
+    --background: 210 20% 98%;
+    --foreground: 215 25% 27%;
+
+    /* Card system - Elevated surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 27%;
+
+    /* Popover system */
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 27%;
+
+    /* Primary - Calming medical blue */
+    --primary: 213 94% 68%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 213 100% 96%;
+
+    /* Secondary - Soft neutral */
+    --secondary: 210 16% 93%;
+    --secondary-foreground: 215 25% 27%;
+
+    /* Muted tones */
+    --muted: 210 16% 93%;
+    --muted-foreground: 215 13% 54%;
+
+    /* Accent - Professional teal */
+    --accent: 187 85% 53%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Health status colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 142 76% 94%;
+
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 45 93% 95%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 84% 96%;
+
+    /* UI elements */
+    --border: 210 16% 87%;
+    --input: 210 16% 93%;
+    --ring: 213 94% 68%;
+
+    /* Design tokens */
+    --radius: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(213 94% 68%), hsl(187 85% 53%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 42%));
+    --gradient-warning: linear-gradient(135deg, hsl(45 93% 47%), hsl(45 93% 52%));
+    --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%), hsl(0 84% 65%));
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(215 25% 27% / 0.05);
+    --shadow: 0 4px 6px -1px hsl(215 25% 27% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(215 25% 27% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(215 25% 27% / 0.1);
+
+    /* Animations */
+    --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark mode - Professional medical dark theme */
+    --background: 215 28% 9%;
+    --foreground: 210 20% 92%;
+
+    --card: 215 28% 12%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 215 28% 12%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 213 94% 68%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 213 94% 15%;
+
+    --secondary: 215 28% 15%;
+    --secondary-foreground: 210 20% 92%;
+
+    --muted: 215 28% 15%;
+    --muted-foreground: 215 13% 65%;
+
+    --accent: 187 85% 53%;
+    --accent-foreground: 0 0% 100%;
+
+    --success: 142 76% 42%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 142 76% 15%;
+
+    --warning: 45 93% 52%;
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 45 93% 15%;
+
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 84% 15%;
+
+    --border: 215 28% 18%;
+    --input: 215 28% 15%;
+    --ring: 213 94% 68%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom utility classes */
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-success {
+    background: var(--gradient-success);
+  }
+
+  .gradient-warning {
+    background: var(--gradient-warning);
+  }
+
+  .gradient-danger {
+    background: var(--gradient-danger);
+  }
+
+  .glass-effect {
+    backdrop-filter: blur(10px);
+    background: hsl(var(--background) / 0.8);
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { 
+      opacity: 0; 
+      transform: translateY(20px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+}
