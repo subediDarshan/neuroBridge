@@ -1,5 +1,5 @@
 import axios from "axios";
 
 export const API = axios.create({
-    baseURL: "http://localhost:5000/api",   // Your backend URL
+    baseURL: "https://neurobridge-backend-jxm8.onrender.com/api",   // Your backend URL
 });
