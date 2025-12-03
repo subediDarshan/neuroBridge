@@ -3,6 +3,9 @@ import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
 import { realtimeDataInterval, dailyDataInterval } from "./constants.js";
+import dotenv from "dotenv";
+
+dotenv.config()
 
 const app = express();
 
@@ -116,9 +119,7 @@ app.post("/reset", (req, res) => {
 });
 
 // Start server
-server.listen(3000, () => {
-    console.log("Server running on http://localhost:3000");
+const port = process.env.PORT || 4000;
+server.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
 });
-
-
-
