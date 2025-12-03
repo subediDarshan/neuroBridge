@@ -7,6 +7,7 @@ pydantic
 
 langgraph
 langchain
+langchain-core
 langchain-google-genai
 
 schedule
