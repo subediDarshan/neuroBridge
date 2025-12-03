@@ -14,7 +14,7 @@ export default function Test() {
       setLoading(true);
       setApiResponse("Sending...");
 
-      const url = `http://localhost:3000${endpoint}`;
+      const url = `https://neurobridge-simulator.onrender.com${endpoint}`;
 
       const res = await axios.post(url, body || {});
       setApiResponse(res.data || "Success");
