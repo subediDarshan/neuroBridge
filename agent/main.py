@@ -17,14 +17,14 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
 
     # Initialize DB
-    db = init_db()
-    print("Connected to MongoDB:", db.name)
+    # db = init_db()
+    # print("Connected to MongoDB:", db.name)
 
     # Start workflow schedulers
-    start_schedulers()
+    # start_schedulers()
     
     # Show what's scheduled (optional)
-    show_scheduled_jobs()
+    # show_scheduled_jobs()
 
     # Connect to Socket.IO server (this will block)
     try:

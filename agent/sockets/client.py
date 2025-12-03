@@ -26,10 +26,10 @@ def register_handlers():
 
     @sio.on("realtimeData")
     def on_realtime_data_handler(data):
-        print("Received Realtime Data:", data)
+        # print("Received Realtime Data:", data)
         try:
             validated = realtime_data(**data)
-            save_to_db(realtime_data_collection, validated)
+            # save_to_db(realtime_data_collection, validated)
         except Exception as e:
             print(f"Validation failed for realtime data: {e}")
         
@@ -49,16 +49,16 @@ def register_handlers():
 
     @sio.on("dailyData")
     def on_daily_data_handler(data):
-        print("Received Daily Data:", data)
+        # print("Received Daily Data:", data)
         try:
             validated = daily_data(**data)
-            save_to_db(daily_data_collection, validated)
+            # save_to_db(daily_data_collection, validated)
         except Exception as e:
             print(f"Validation failed for daily data: {e}")
         
         def task():
             daily_workflow.invoke({})
-        threading.Thread(target=task, daemon=True).start()
+        # threading.Thread(target=task, daemon=True).start()
 
 
     @sio.on("overrideSet")
