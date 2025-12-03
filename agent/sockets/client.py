@@ -76,7 +76,7 @@ def register_handlers():
         print("Disconnected from server")
         
 
-def connect_to_server(url="http://localhost:3000"):
+def connect_to_server(url="https://neurobridge-simulator.onrender.com/"):
     register_handlers()
     sio.connect(url)
     sio.wait()
