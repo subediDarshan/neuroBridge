@@ -158,7 +158,7 @@ def pass_to_llm(state: State):
 
 
 def sms_alert(state: State):
-    print("📩 Sending SMS alert...")
+    print("Sending SMS alert...")
 
     validated_data = call_sms_history(type = "emergency_sms", timestamp = datetime.now(timezone.utc))
     call_sms_history_collection.insert_one(validated_data.model_dump())
@@ -177,7 +177,7 @@ def sms_alert(state: State):
 
 
 def emergency_call(state: State):
-    print("🚨 Emergency Call triggered!")
+    print("Emergency Call triggered!")
 
     validated_data = call_sms_history(type = "emergency_call", timestamp = datetime.now(timezone.utc))
     call_sms_history_collection.insert_one(validated_data.model_dump())
@@ -229,7 +229,7 @@ def emergency_call(state: State):
 
 
 def family_call(state: State):
-    print("🚨 Family Call triggered!")
+    print("Family Call triggered!")
 
     validated_data = call_sms_history(type = "family_call", timestamp = datetime.now(timezone.utc))
     call_sms_history_collection.insert_one(validated_data.model_dump())
@@ -243,7 +243,7 @@ def family_call(state: State):
 
 
 def therapist_call(state: State):
-    print("🚨 Therapist Call triggered!")
+    print("Therapist Call triggered!")
 
     validated_data = call_sms_history(type = "therapist_call", timestamp = datetime.now(timezone.utc))
     call_sms_history_collection.insert_one(validated_data.model_dump())

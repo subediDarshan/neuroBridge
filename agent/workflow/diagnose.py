@@ -238,7 +238,7 @@ def pass_to_llm(state: State):
 
 def send_sms(state: State):
     """Send SMS alert if prediction indicates concern"""
-    print("📩 Sending trend analysis SMS alert...")
+    print("Sending trend analysis SMS alert...")
     print(f"Prediction: {state['prediction']}")
     print(f"SMS: {state['sms_message']}")
 
@@ -255,7 +255,7 @@ def send_sms(state: State):
 
 def end_normal(state: State):
     """End node for normal predictions"""
-    print("✅ Health trends are normal - no alert needed")
+    print("Health trends are normal - no alert needed")
     print(f"Analysis: {state['analysis']['trend_summary']}")
     return {**state, "status": "completed_normal"}
 

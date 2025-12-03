@@ -72,7 +72,7 @@ function generateDailyData() {
 
 // WebSocket (Socket.IO) connection
 io.on("connection", (socket) => {
-    console.log("📡 Client connected:", socket.id);
+    console.log("Client connected:", socket.id);
 
     // Realtime stream (every 5s)
     const realtimeInterval = setInterval(() => {
@@ -85,7 +85,7 @@ io.on("connection", (socket) => {
     }, dailyDataInterval);
 
     socket.on("disconnect", () => {
-        console.log("❌ Client disconnected:", socket.id);
+        console.log("Client disconnected:", socket.id);
         clearInterval(realtimeInterval);
         clearInterval(dailyInterval);
     });
@@ -117,7 +117,7 @@ app.post("/reset", (req, res) => {
 
 // Start server
 server.listen(3000, () => {
-    console.log("🚀 Server running on http://localhost:3000");
+    console.log("Server running on http://localhost:3000");
 });
 
 

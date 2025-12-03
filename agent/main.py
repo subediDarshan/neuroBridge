@@ -6,19 +6,19 @@ import sys
 
 def signal_handler(sig, frame):
     """Handle graceful shutdown on Ctrl+C"""
-    print('\n🛑 Shutting down gracefully...')
+    print('\n Shutting down gracefully...')
     stop_schedulers()
     sys.exit(0)
 
 if __name__ == "__main__":
-    print("🚀 Starting app...")
+    print("Starting app...")
 
     # Set up signal handler for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
 
     # Initialize DB
     db = init_db()
-    print("📦 Connected to MongoDB:", db.name)
+    print("Connected to MongoDB:", db.name)
 
     # Start workflow schedulers
     start_schedulers()
@@ -30,6 +30,6 @@ if __name__ == "__main__":
     try:
         connect_to_server()
     except KeyboardInterrupt:
-        print("🛑 Received interrupt signal")
+        print("Received interrupt signal")
         stop_schedulers()
         sys.exit(0)

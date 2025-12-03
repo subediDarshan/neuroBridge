@@ -70,7 +70,7 @@ def pass_to_llm(state: State):
 
 
 def sms_alert(state: State):
-    print("📩 Sending SMS alert...")
+    print("Sending SMS alert...")
     sms_message = state.get("sms_message")
     print(f"sms_message: {sms_message}")
     # Twilio Integration for SMS
